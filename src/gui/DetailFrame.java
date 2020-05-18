@@ -9,9 +9,13 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 
+import dao.MemberDao;
 import model.GroupType;
+import model.Member;
+import service.MemberService;
 
 public class DetailFrame extends JFrame {
 
@@ -23,6 +27,7 @@ public class DetailFrame extends JFrame {
 	private JTextField tfName, tfPhone, tfAddress;
 	private JComboBox<GroupType> cbGroup;
 	private JButton updateButton, deleteButton;
+	private MemberService memberService = MemberService.getInstance();
 
 	public DetailFrame(MainFrame mainFrame, int memberId) {
 		this.mainFrame = mainFrame;
@@ -49,7 +54,12 @@ public class DetailFrame extends JFrame {
 	}
 
 	private void initData() {
-
+		// DetailFrame -> MemberService -> MemberDao의 상세보기() -> DB
+		Member member = memberService.상세보기(memberId);
+		tfName.setText(member.getName()); // setText()는 repaint()를 들고 있음 
+		tfPhone.setText(member.getPhone());
+		tfAddress.setText(member.getAddress());
+		cbGroup.setSelectedItem(member.getGroupType());
 	}
 
 	private void initDesign() {
@@ -73,14 +83,48 @@ public class DetailFrame extends JFrame {
 	}
 
 	private void initListener() {
+		
 		updateButton.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				detailFrame.dispose();
-			}
-
+				// 서비스 연결 - 수정 
+				Member member = Member.builder()
+						.id(memberId)
+						.name(tfName.getText())
+						.phone(tfPhone.getText())
+						.address(tfAddress.getText())
+						.groupType(GroupType.valueOf(cbGroup.getSelectedItem().toString()))
+						.build();
+				
+				// result == 1 이면 아래 로직 실행, 1이 아니면 다이어로그 박스 (수정 실패)
+				int result = memberService.수정(member);
+				if (result == 1) {
+					mainFrame.notifyUserList();
+					detailFrame.dispose();
+					mainFrame.setVisible(true);
+				} else {
+					JOptionPane.showMessageDialog(null, "주소록 수정에 실패했습니다.");
+				}
+				
+			}	
 		});
 
+		deleteButton.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// 서비스 연결 - 삭제
+				int result = memberService.삭제(memberId);
+				// result == 1 이면 아래 로직 실행, 1이 아니면 다이어로그 박스 (삭제 실패)
+				if (result == 1) {
+					mainFrame.notifyUserList();
+					detailFrame.dispose();
+					mainFrame.setVisible(true);
+				} else {
+					JOptionPane.showMessageDialog(null, "주소록 삭제에 실패했습니다.");
+				}
+			}
+		});
 	}
 }
